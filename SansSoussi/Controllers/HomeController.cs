@@ -60,8 +60,11 @@ namespace SansSoussi.Controllers
                 {
                     //add new comment to db
                     SqlCommand cmd = new SqlCommand(
-                        "insert into Comments (UserId, CommentId, Comment) Values ('" + user.ProviderUserKey + "','" + Guid.NewGuid() + "','" + comment + "')",
+                        "insert into Comments (UserId, CommentId, Comment) Values (@ProviderUserKey, @NewGuid, @Comment)",
                     _dbConnection);
+                    cmd.Parameters.AddWithValue("@ProviderUserKey", user.ProviderUserKey);
+                    cmd.Parameters.AddWithValue("@NewGuid", Guid.NewGuid());
+                    cmd.Parameters.AddWithValue("@Comment", comment);
                     _dbConnection.Open();
 
                     cmd.ExecuteNonQuery();
