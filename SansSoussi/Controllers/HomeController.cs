@@ -64,7 +64,7 @@ namespace SansSoussi.Controllers
                     _dbConnection);
                     cmd.Parameters.AddWithValue("@ProviderUserKey", user.ProviderUserKey);
                     cmd.Parameters.AddWithValue("@NewGuid", Guid.NewGuid());
-                    cmd.Parameters.AddWithValue("@Comment", comment);
+                    cmd.Parameters.AddWithValue("@Comment", System.Net.WebUtility.HtmlEncode(comment));
                     _dbConnection.Open();
 
                     cmd.ExecuteNonQuery();
