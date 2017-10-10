@@ -1,4 +1,5 @@
 ﻿using DotNetOpenAuth.AspNet;
+using Microsoft.Web.WebPages.OAuth;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -60,6 +61,8 @@ namespace SansSoussi.Models
 
         [Display(Name = "Remember me?")]
         public bool RememberMe { get; set; }
+
+        public ICollection<AuthenticationClientData> AuthenticationClientData { get; set; }
     }
 
 
@@ -96,7 +99,11 @@ namespace SansSoussi.Models
     public interface IMembershipService
     {
         int MinPasswordLength { get; }
-        
+
+        bool ValidateUser(string userName, string password);
+
+        MembershipCreateStatus CreateUser(string userName, string password, string email);
+
         bool ValidateUserFromExternalAuth(AuthenticationResult result);
 
         MembershipCreateStatus CreateUserFromExternalAuth(AuthenticationResult result);
@@ -124,6 +131,25 @@ namespace SansSoussi.Models
             {
                 return _provider.MinRequiredPasswordLength;
             }
+        }
+
+        public bool ValidateUser(string userName, string password)
+        {
+            if (String.IsNullOrEmpty(userName)) throw new ArgumentException("Value cannot be null or empty.", "userName");
+            if (String.IsNullOrEmpty(password)) throw new ArgumentException("Value cannot be null or empty.", "password");
+
+            return _provider.ValidateUser(userName, password);
+        }
+
+        public MembershipCreateStatus CreateUser(string userName, string password, string email)
+        {
+            if (String.IsNullOrEmpty(userName)) throw new ArgumentException("Value cannot be null or empty.", "userName");
+            if (String.IsNullOrEmpty(password)) throw new ArgumentException("Value cannot be null or empty.", "password");
+            if (String.IsNullOrEmpty(email)) throw new ArgumentException("Value cannot be null or empty.", "email");
+
+            MembershipCreateStatus status;
+            _provider.CreateUser(userName, password, email, null, null, true, null, out status);
+            return status;
         }
 
         public bool ValidateUserFromExternalAuth(AuthenticationResult result)
