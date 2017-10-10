@@ -83,6 +83,8 @@ namespace SansSoussi.Controllers
                         //Encode the username in base64
                         byte[] toEncodeAsBytes = System.Text.ASCIIEncoding.ASCII.GetBytes(result.ExtraData["name"]);
                         HttpCookie authCookie = new HttpCookie("username", System.Convert.ToBase64String(toEncodeAsBytes));
+                        authCookie.HttpOnly = true;
+                        authCookie.Secure = true;
                         HttpContext.Response.Cookies.Add(authCookie);
                         return RedirectToAction("Index", "Home");
                     }
@@ -98,6 +100,8 @@ namespace SansSoussi.Controllers
                         //Encode the username in base64
                         byte[] toEncodeAsBytes = System.Text.ASCIIEncoding.ASCII.GetBytes(result.ExtraData["name"]);
                         HttpCookie authCookie = new HttpCookie("username", System.Convert.ToBase64String(toEncodeAsBytes));
+                        authCookie.HttpOnly = true;
+                        authCookie.Secure = true;
                         HttpContext.Response.Cookies.Add(authCookie);
                         return RedirectToAction("Index", "Home");
                     }
@@ -142,6 +146,8 @@ namespace SansSoussi.Controllers
                         //Encode the username in base64
                         byte[] toEncodeAsBytes = System.Text.ASCIIEncoding.ASCII.GetBytes(model.UserName);
                         HttpCookie authCookie = new HttpCookie("username", System.Convert.ToBase64String(toEncodeAsBytes));
+                        authCookie.HttpOnly = true;
+                        authCookie.Secure = true;
                         HttpContext.Response.Cookies.Add(authCookie);
                         return RedirectToAction("Index", "Home");
                     }
@@ -176,6 +182,8 @@ namespace SansSoussi.Controllers
                     //Encode the username in base64
                     byte[] toEncodeAsBytes = System.Text.ASCIIEncoding.ASCII.GetBytes(model.UserName);
                     HttpCookie authCookie = new HttpCookie("username", System.Convert.ToBase64String(toEncodeAsBytes));
+                    authCookie.HttpOnly = true;
+                    authCookie.Secure = true;
                     HttpContext.Response.Cookies.Add(authCookie);
                     return RedirectToAction("Index", "Home");
                 }
