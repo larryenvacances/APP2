@@ -56,7 +56,8 @@ namespace SansSoussi.Controllers
             {
                 //Get current user from default membership provider
                 MembershipUser user = Membership.Provider.GetUser(HttpContext.User.Identity.Name, true);
-                if (user != null)
+                string origin = HttpContext.Request.Headers.GetValues("Origin")[0];
+                if (user != null && origin == "https://localhost:44381"
                 {
                     //add new comment to db
                     SqlCommand cmd = new SqlCommand(
