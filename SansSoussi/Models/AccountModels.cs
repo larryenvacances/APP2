@@ -1,4 +1,6 @@
-﻿using System;
+﻿using DotNetOpenAuth.AspNet;
+using Microsoft.Web.WebPages.OAuth;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -12,6 +14,20 @@ namespace SansSoussi.Models
 {
 
     #region Models
+
+    public class RegisterExternalLoginModel
+    {
+        [Required]
+        [Display(Name = "User name")]
+        public string UserName { get; set; }
+
+        public string ExternalLoginData { get; set; }
+    }
+
+    public class ExternalLoginListViewModel
+    {
+        public string ReturnUrl { get; set; }
+    }
 
     public class ChangePasswordModel
     {
@@ -45,6 +61,8 @@ namespace SansSoussi.Models
 
         [Display(Name = "Remember me?")]
         public bool RememberMe { get; set; }
+
+        public ICollection<AuthenticationClientData> AuthenticationClientData { get; set; }
     }
 
 
@@ -83,7 +101,13 @@ namespace SansSoussi.Models
         int MinPasswordLength { get; }
 
         bool ValidateUser(string userName, string password);
+
         MembershipCreateStatus CreateUser(string userName, string password, string email);
+
+        bool ValidateUserFromExternalAuth(AuthenticationResult result);
+
+        MembershipCreateStatus CreateUserFromExternalAuth(AuthenticationResult result);
+
         bool ChangePassword(string userName, string oldPassword, string newPassword);
     }
 
@@ -125,6 +149,19 @@ namespace SansSoussi.Models
 
             MembershipCreateStatus status;
             _provider.CreateUser(userName, password, email, null, null, true, null, out status);
+            return status;
+        }
+
+        public bool ValidateUserFromExternalAuth(AuthenticationResult result)
+        {
+            return _provider.ValidateUser(result.ExtraData["name"], result.ExtraData["id"]);
+        }
+
+        public MembershipCreateStatus CreateUserFromExternalAuth(AuthenticationResult result)
+        {
+            if (!result.IsSuccessful) throw new ArgumentException("La requête a chié");
+            
+            _provider.CreateUser(result.ExtraData["name"], result.ExtraData["id"], result.ExtraData["email"], null, null, true, null, out MembershipCreateStatus status);
             return status;
         }
 
