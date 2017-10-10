@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Owin;
+using SansSoussi.App_Start;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -35,6 +37,8 @@ namespace SansSoussi
 
             RegisterGlobalFilters(GlobalFilters.Filters);
             RegisterRoutes(RouteTable.Routes);
+
+            AuthConfig.RegisterAuth();
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DotNetOpenAuth.AspNet;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -12,6 +13,20 @@ namespace SansSoussi.Models
 {
 
     #region Models
+
+    public class RegisterExternalLoginModel
+    {
+        [Required]
+        [Display(Name = "User name")]
+        public string UserName { get; set; }
+
+        public string ExternalLoginData { get; set; }
+    }
+
+    public class ExternalLoginListViewModel
+    {
+        public string ReturnUrl { get; set; }
+    }
 
     public class ChangePasswordModel
     {
@@ -81,9 +96,11 @@ namespace SansSoussi.Models
     public interface IMembershipService
     {
         int MinPasswordLength { get; }
+        
+        bool ValidateUserFromExternalAuth(AuthenticationResult result);
 
-        bool ValidateUser(string userName, string password);
-        MembershipCreateStatus CreateUser(string userName, string password, string email);
+        MembershipCreateStatus CreateUserFromExternalAuth(AuthenticationResult result);
+
         bool ChangePassword(string userName, string oldPassword, string newPassword);
     }
 
@@ -109,22 +126,16 @@ namespace SansSoussi.Models
             }
         }
 
-        public bool ValidateUser(string userName, string password)
+        public bool ValidateUserFromExternalAuth(AuthenticationResult result)
         {
-            if (String.IsNullOrEmpty(userName)) throw new ArgumentException("Value cannot be null or empty.", "userName");
-            if (String.IsNullOrEmpty(password)) throw new ArgumentException("Value cannot be null or empty.", "password");
-
-            return _provider.ValidateUser(userName, password);
+            return _provider.ValidateUser(result.ExtraData["name"], result.ExtraData["id"]);
         }
 
-        public MembershipCreateStatus CreateUser(string userName, string password, string email)
+        public MembershipCreateStatus CreateUserFromExternalAuth(AuthenticationResult result)
         {
-            if (String.IsNullOrEmpty(userName)) throw new ArgumentException("Value cannot be null or empty.", "userName");
-            if (String.IsNullOrEmpty(password)) throw new ArgumentException("Value cannot be null or empty.", "password");
-            if (String.IsNullOrEmpty(email)) throw new ArgumentException("Value cannot be null or empty.", "email");
-
-            MembershipCreateStatus status;
-            _provider.CreateUser(userName, password, email, null, null, true, null, out status);
+            if (!result.IsSuccessful) throw new ArgumentException("La requête a chié");
+            
+            _provider.CreateUser(result.ExtraData["name"], result.ExtraData["id"], result.ExtraData["email"], null, null, true, null, out MembershipCreateStatus status);
             return status;
         }
 

@@ -8,6 +8,9 @@ using System.Web.Mvc;
 using System.Web.Routing;
 using System.Web.Security;
 using SansSoussi.Models;
+using Microsoft.Web.WebPages.OAuth;
+using DotNetOpenAuth.AspNet;
+using DotNetOpenAuth.GoogleOAuth2;
 
 namespace SansSoussi.Controllers
 {
@@ -29,19 +32,48 @@ namespace SansSoussi.Controllers
         // URL: /Account/LogOn
         // **************************************
 
-        public ActionResult LogOn()
+        public ActionResult LogOn(string returnUrl)
         {
-            return View();
+            ViewBag.ReturnUrl = returnUrl;
+            return View(OAuthWebSecurity.RegisteredClientData);
         }
 
+        // **************************************
+        // URL: /Account/ExternalLogin
+        // **************************************
         [HttpPost]
-        public ActionResult LogOn(LogOnModel model, string returnUrl)
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public void ExternalLogin(string provider, string returnUrl)
         {
-            if (ModelState.IsValid)
+            OAuthWebSecurity.RequestAuthentication(provider, Url.Action("ExternalLoginCallback", new { ReturnUrl = returnUrl }));
+        }
+
+        [AllowAnonymous]
+        public ActionResult ExternalLoginCallback(string returnUrl = "")
+        {
+            GoogleOAuth2Client.RewriteRequest();
+
+            AuthenticationResult result = OAuthWebSecurity.VerifyAuthentication(Url.Action("ExternalLoginCallback", new { ReturnUrl = returnUrl }));
+            if (!result.IsSuccessful)
             {
-                if (MembershipService.ValidateUser(model.UserName, model.Password))
+                return RedirectToAction("ExternalLoginFailure");
+            }
+
+            //if (OAuthWebSecurity.Login(result.Provider, result.ProviderUserId, createPersistentCookie: false))
+            //{
+            //    return RedirectToLocal(returnUrl);
+            //}
+
+            if (User.Identity.IsAuthenticated)
+            {
+                return RedirectToLocal(returnUrl);
+            }
+            else
+            {
+                if (MembershipService.ValidateUserFromExternalAuth(result))
                 {
-                    FormsService.SignIn(model.UserName, model.RememberMe);
+                    FormsService.SignIn(result.ExtraData["name"], false);
                     if (Url.IsLocalUrl(returnUrl))
                     {
                         return Redirect(returnUrl);
@@ -49,7 +81,7 @@ namespace SansSoussi.Controllers
                     else
                     {
                         //Encode the username in base64
-                        byte[] toEncodeAsBytes = System.Text.ASCIIEncoding.ASCII.GetBytes(model.UserName);
+                        byte[] toEncodeAsBytes = System.Text.ASCIIEncoding.ASCII.GetBytes(result.ExtraData["name"]);
                         HttpCookie authCookie = new HttpCookie("username", System.Convert.ToBase64String(toEncodeAsBytes));
                         HttpContext.Response.Cookies.Add(authCookie);
                         return RedirectToAction("Index", "Home");
@@ -57,12 +89,40 @@ namespace SansSoussi.Controllers
                 }
                 else
                 {
-                    ModelState.AddModelError("", "The user name or password provided is incorrect.");
+                    // Attempt to register the user
+                    MembershipCreateStatus createStatus = MembershipService.CreateUserFromExternalAuth(result);
+
+                    if (createStatus == MembershipCreateStatus.Success)
+                    {
+                        FormsService.SignIn(result.ExtraData["name"], false /* createPersistentCookie */);
+                        //Encode the username in base64
+                        byte[] toEncodeAsBytes = System.Text.ASCIIEncoding.ASCII.GetBytes(result.ExtraData["name"]);
+                        HttpCookie authCookie = new HttpCookie("username", System.Convert.ToBase64String(toEncodeAsBytes));
+                        HttpContext.Response.Cookies.Add(authCookie);
+                        return RedirectToAction("Index", "Home");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError("", AccountValidation.ErrorCodeToString(createStatus));
+                    }
                 }
             }
 
             // If we got this far, something failed, redisplay form
-            return View(model);
+            ViewBag.PasswordLength = MembershipService.MinPasswordLength;
+            return RedirectToLocal("");
+        }
+
+        private ActionResult RedirectToLocal(string returnUrl)
+        {
+            if (Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            else
+            {
+                return RedirectToAction("Index", "Home");
+            }
         }
 
         // **************************************
@@ -75,85 +135,5 @@ namespace SansSoussi.Controllers
 
             return RedirectToAction("Index", "Home");
         }
-
-        // **************************************
-        // URL: /Account/Register
-        // **************************************
-
-        public ActionResult Register()
-        {
-            ViewBag.PasswordLength = MembershipService.MinPasswordLength;
-            return View();
-        }
-
-        [HttpPost]
-        public ActionResult Register(RegisterModel model)
-        {
-            if (ModelState.IsValid)
-            {
-                // Attempt to register the user
-                MembershipCreateStatus createStatus = MembershipService.CreateUser(model.UserName, model.Password, model.Email);
-
-                if (createStatus == MembershipCreateStatus.Success)
-                {
-                    FormsService.SignIn(model.UserName, false /* createPersistentCookie */);
-                    //Encode the username in base64
-                    byte[] toEncodeAsBytes = System.Text.ASCIIEncoding.ASCII.GetBytes(model.UserName);
-                    HttpCookie authCookie = new HttpCookie("username", System.Convert.ToBase64String(toEncodeAsBytes));
-                    HttpContext.Response.Cookies.Add(authCookie);
-                    return RedirectToAction("Index", "Home");
-                }
-                else
-                {
-                    ModelState.AddModelError("", AccountValidation.ErrorCodeToString(createStatus));
-                }
-            }
-
-            // If we got this far, something failed, redisplay form
-            ViewBag.PasswordLength = MembershipService.MinPasswordLength;
-            return View(model);
-        }
-
-        // **************************************
-        // URL: /Account/ChangePassword
-        // **************************************
-
-        [Authorize]
-        public ActionResult ChangePassword()
-        {
-            ViewBag.PasswordLength = MembershipService.MinPasswordLength;
-            return View();
-        }
-
-        [Authorize]
-        [HttpPost]
-        public ActionResult ChangePassword(ChangePasswordModel model)
-        {
-            if (ModelState.IsValid)
-            {
-                if (MembershipService.ChangePassword(User.Identity.Name, model.OldPassword, model.NewPassword))
-                {
-                    return RedirectToAction("ChangePasswordSuccess");
-                }
-                else
-                {
-                    ModelState.AddModelError("", "The current password is incorrect or the new password is invalid.");
-                }
-            }
-
-            // If we got this far, something failed, redisplay form
-            ViewBag.PasswordLength = MembershipService.MinPasswordLength;
-            return View(model);
-        }
-
-        // **************************************
-        // URL: /Account/ChangePasswordSuccess
-        // **************************************
-
-        public ActionResult ChangePasswordSuccess()
-        {
-            return View();
-        }
-
     }
 }
